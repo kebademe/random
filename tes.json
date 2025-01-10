@@ -1,1 +1,55 @@
 
+package com.example
+
+import org.gradle.api.Plugin
+import org.gradle.api.Project
+import org.gradle.testing.jacoco.tasks.JacocoReport
+
+class JacocoGlobalReportPlugin implements Plugin<Project> {
+
+    @Override
+    void apply(Project project) {
+        project.allprojects { subProject ->
+            subProject.pluginManager.apply('jacoco') // Applique le plugin JaCoCo à chaque sous-projet
+
+            subProject.tasks.withType(Test) { test ->
+                test.useJUnitPlatform() // Configure JUnit Platform
+                test.finalizedBy 'jacocoTestReport' // Génère le rapport après les tests
+            }
+
+            subProject.tasks.register('jacocoTestReport', JacocoReport) { report ->
+                report.dependsOn subProject.tasks.withType(Test) // Génère le rapport après les tests
+                report.reports {
+                    xml.required = true
+                    html.required = true
+                    csv.required = false
+                }
+            }
+        }
+
+        // Crée une tâche pour le rapport global
+        project.tasks.register('jacocoGlobalReport', JacocoReport) { globalReport ->
+            globalReport.dependsOn project.subprojects*.tasks.matching { it.name == 'test' }
+
+            globalReport.additionalSourceDirs = project.files(
+                project.subprojects*.sourceSets.main.allSource.srcDirs
+            )
+            globalReport.sourceDirectories = project.files(
+    project.subprojects*.sourceSets.main.allSource.srcDirs
+            )
+            globalReport.classDirectories = project.files(
+                project.subprojects*.sourceSets.main.output
+            )
+            globalReport.executionData = project.files(
+                project.subprojects*.tasks.matching { it.name == 'jacocoTestReport' }.collect { it.executionData }
+            )
+
+            globalReport.reports {
+                xml.required = true
+                xml.outputLocation = project.file("${project.buildDir}/reports/jacoco/report.xml")
+                html.required = true
+                html.outputLocation = project.file("${project.buildDir}/reports/jacoco/html")
+            }
+        }
+    }
+}
