@@ -52,3 +52,51 @@ class JacocoCustomPlugin : Plugin<Project> {
 import com.your.company.jacoco.JacocoCustomPlugin
 
 apply<JacocoCustomPlugin>()
+
+========
+package com.your.company.jacoco
+
+import org.gradle.api.Plugin
+import org.gradle.api.Project
+import org.gradle.testing.jacoco.tasks.JacocoReport
+import org.gradle.testing.jacoco.tasks.JacocoCoverageVerification
+
+// Définir l'extension pour la configuration
+class JacocoCustomExtension {
+    String dependencyModule = ""
+}
+
+// Définir le plugin personnalisé JaCoCo
+class JacocoCustomPlugin implements Plugin<Project> {
+    @Override
+    void apply(Project project) {
+        // Créer l'extension pour la configuration
+        def extension = project.extensions.create("jacocoCustom", JacocoCustomExtension)
+
+        // S'assurer que le plugin JaCoCo est appliqué
+        project.plugins.apply("jacoco")
+
+        project.afterEvaluate {
+            // Vérifier que le module de dépendance est spécifié
+            if (!extension.dependencyModule) {
+                throw new IllegalArgumentException("dependencyModule must be specified in jacocoCustom configuration")
+            }
+
+            // Configurer le rapport JaCoCo
+            project.tasks.named("jacocoTestReport", JacocoReport) { task ->
+                task.classDirectories.setFrom(project.files(
+                    task.classDirectories.files,
+                    project.project(extension.dependencyModule).buildDir.toPath().resolve("classes/java/main").toFile()
+                ))
+            }
+
+            // Configurer la vérification de couverture JaCoCo
+            project.tasks.named("jacocoTestCoverageVerification", JacocoCoverageVerification) { task ->
+                task.classDirectories.setFrom(project.files(
+                    task.classDirectories.files,
+                    project.project(extension.dependencyModule).buildDir.toPath().resolve("classes/java/main").toFile()
+                ))
+            }
+        }
+    }
+}
