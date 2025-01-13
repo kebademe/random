@@ -1,55 +1,54 @@
 
-package com.example
+// File: buildSrc/src/main/kotlin/com/your/company/jacoco/JacocoCustomExtension.kt
+package com.your.company.jacoco
+
+open class JacocoCustomExtension {
+    var dependencyModule: String = ""
+}
+
+// File: buildSrc/src/main/kotlin/com/your/company/jacoco/JacocoCustomPlugin.kt
+package com.your.company.jacoco
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.kotlin.dsl.create
+import org.gradle.kotlin.dsl.named
 import org.gradle.testing.jacoco.tasks.JacocoReport
+import org.gradle.testing.jacoco.tasks.JacocoCoverageVerification
 
-class JacocoGlobalReportPlugin implements Plugin<Project> {
+class JacocoCustomPlugin : Plugin<Project> {
+    override fun apply(project: Project) {
+        // Créer l'extension pour la configuration
+        val extension = project.extensions.create<JacocoCustomExtension>("jacocoCustom")
 
-    @Override
-    void apply(Project project) {
-        project.allprojects { subProject ->
-            subProject.pluginManager.apply('jacoco') // Applique le plugin JaCoCo à chaque sous-projet
+        // S'assurer que le plugin jacoco est appliqué
+        project.plugins.apply("jacoco")
 
-            subProject.tasks.withType(Test) { test ->
-                test.useJUnitPlatform() // Configure JUnit Platform
-                test.finalizedBy 'jacocoTestReport' // Génère le rapport après les tests
+        project.afterEvaluate {
+            require(extension.dependencyModule.isNotEmpty()) {
+                "dependencyModule must be specified in jacocoCustom configuration"
             }
 
-            subProject.tasks.register('jacocoTestReport', JacocoReport) { report ->
-                report.dependsOn subProject.tasks.withType(Test) // Génère le rapport après les tests
-                report.reports {
-                    xml.required = true
-                    html.required = true
-                    csv.required = false
-                }
+            // Configurer le rapport JaCoCo
+            project.tasks.named<JacocoReport>("jacocoTestReport") {
+                classDirectories.setFrom(files(
+                    classDirectories.files,
+                    project.project(extension.dependencyModule).buildDir.resolve("classes/java/main")
+                ))
             }
-        }
 
-        // Crée une tâche pour le rapport global
-        project.tasks.register('jacocoGlobalReport', JacocoReport) { globalReport ->
-            globalReport.dependsOn project.subprojects*.tasks.matching { it.name == 'test' }
-
-            globalReport.additionalSourceDirs = project.files(
-                project.subprojects*.sourceSets.main.allSource.srcDirs
-            )
-            globalReport.sourceDirectories = project.files(
-    project.subprojects*.sourceSets.main.allSource.srcDirs
-            )
-            globalReport.classDirectories = project.files(
-                project.subprojects*.sourceSets.main.output
-            )
-            globalReport.executionData = project.files(
-                project.subprojects*.tasks.matching { it.name == 'jacocoTestReport' }.collect { it.executionData }
-            )
-
-            globalReport.reports {
-                xml.required = true
-                xml.outputLocation = project.file("${project.buildDir}/reports/jacoco/report.xml")
-                html.required = true
-                html.outputLocation = project.file("${project.buildDir}/reports/jacoco/html")
+            // Configurer la vérification JaCoCo
+            project.tasks.named<JacocoCoverageVerification>("jacocoTestCoverageVerification") {
+                classDirectories.setFrom(files(
+                    classDirectories.files,
+                    project.project(extension.dependencyModule).buildDir.resolve("classes/java/main")
+                ))
             }
         }
     }
 }
+
+// File: buildSrc/src/main/kotlin/jacoco-custom.gradle.kts
+import com.your.company.jacoco.JacocoCustomPlugin
+
+apply<JacocoCustomPlugin>()
