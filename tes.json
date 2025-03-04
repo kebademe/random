@@ -100,3 +100,50 @@ class JacocoCustomPlugin implements Plugin<Project> {
         }
     }
 }
+
+
+
+=======
+import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class AdditionalRabbitMQConfig {
+
+    /**
+     * Configuration pour le broker RabbitMQ supplémentaire
+     */
+    @Bean(name = "additionalConnectionFactory")
+    public CachingConnectionFactory additionalConnectionFactory(
+        @Value("${additional.rabbitmq.host}") String host,
+        @Value("${additional.rabbitmq.port}") int port,
+        @Value("${additional.rabbitmq.username}") String username,
+        @Value("${additional.rabbitmq.password}") String password,
+        @Value("${additional.rabbitmq.virtual-host:}") String virtualHost
+    ) {
+        CachingConnectionFactory connectionFactory = new CachingConnectionFactory(host);
+        connectionFactory.setPort(port);
+        connectionFactory.setUsername(username);
+        connectionFactory.setPassword(password);
+        
+        // Définir le virtual host si spécifié
+        if (virtualHost != null && !virtualHost.isEmpty()) {
+            connectionFactory.setVirtualHost(virtualHost);
+        }
+        
+        return connectionFactory;
+    }
+
+    /**
+     * RabbitTemplate pour le broker supplémentaire
+     */
+    @Bean(name = "additionalRabbitTemplate")
+    public RabbitTemplate additionalRabbitTemplate(
+        CachingConnectionFactory additionalConnectionFactory
+    ) {
+        return new RabbitTemplate(additionalConnectionFactory);
+    }
+}
