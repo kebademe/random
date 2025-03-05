@@ -147,3 +147,70 @@ public class AdditionalRabbitMQConfig {
         return new RabbitTemplate(additionalConnectionFactory);
     }
 }
+@@@@@@@@@@@@@
+import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+import org.springframework.amqp.rabbit.connection.RabbitConnectionFactoryBean;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class RabbitSSLConfig {
+
+    // 🔹 Première ConnectionFactory avec SSL
+    @Bean
+    public ConnectionFactory connectionFactory1() throws Exception {
+        RabbitConnectionFactoryBean factoryBean = new RabbitConnectionFactoryBean();
+        factoryBean.setHost("broker1-host");
+        factoryBean.setPort(5671); // Port SSL
+        factoryBean.setUsername("user1");
+        factoryBean.setPassword("password1");
+
+        // Configuration SSL via Spring-AMQP
+        factoryBean.setUseSSL(true);
+        factoryBean.setSslAlgorithm("TLS");
+        factoryBean.setTrustStore("path/to/truststore1.jks");
+        factoryBean.setTrustStorePassphrase("truststorePassword1");
+
+        // Si authentification client nécessaire
+        factoryBean.setKeyStore("path/to/keystore1.p12");
+        factoryBean.setKeyStorePassphrase("keystorePassword1");
+
+        factoryBean.afterPropertiesSet(); // Initialise le bean
+
+        return new CachingConnectionFactory(factoryBean.getObject());
+    }
+
+    @Bean
+    public RabbitTemplate rabbitTemplate1() throws Exception {
+        return new RabbitTemplate(connectionFactory1());
+    }
+
+    // 🔹 Deuxième ConnectionFactory avec SSL
+    @Bean
+    public ConnectionFactory connectionFactory2() throws Exception {
+        RabbitConnectionFactoryBean factoryBean = new RabbitConnectionFactoryBean();
+        factoryBean.setHost("broker2-host");
+        factoryBean.setPort(5671);
+        factoryBean.setUsername("user2");
+        factoryBean.setPassword("password2");
+
+        factoryBean.setUseSSL(true);
+        factoryBean.setSslAlgorithm("TLS");
+        factoryBean.setTrustStore("path/to/truststore2.jks");
+        factoryBean.setTrustStorePassphrase("truststorePassword2");
+
+        factoryBean.setKeyStore("path/to/keystore2.p12");
+        factoryBean.setKeyStorePassphrase("keystorePassword2");
+
+        factoryBean.afterPropertiesSet();
+
+        return new CachingConnectionFactory(factoryBean.getObject());
+    }
+
+    @Bean
+    public RabbitTemplate rabbitTemplate2() throws Exception {
+        return new RabbitTemplate(connectionFactory2());
+    }
+}
